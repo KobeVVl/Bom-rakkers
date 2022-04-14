@@ -22,7 +22,8 @@ Het principe is vrij eenvoudig. Als er een draadje verwijdert wordt (of in ideal
 
 De groene gaten zijn de connecties waar je de klemmen kan insteken. Hierdoor sluit je dus een aantal weerstanden kort, waardoor de uiteindelijke spanningen op de 4 bovenste groene bollen telkens zal veranderen. 
 
-*(table)*
+![image](https://user-images.githubusercontent.com/86438012/163403146-cb3d7c0c-d159-4b3e-b0d6-939e4c4790e8.png)
+
 
 Uit simulaties, en getest in de praktijk, is gebleken dat wanneer we slechts 4 spanningen meten (dus de bovenste groene bollen) we 100% zeker een onderscheid kunnen maken in de 15 verschillende combinaties.  De 4 spanningen lezen we af met A0, A1, A2, A3, vier analoge ingangen, zoals de vorige 2 mechanismen. 
 
@@ -38,6 +39,8 @@ Voor de tikkende tijdbom aan te geven, zal gebruikt worden gemaakt van een rode 
 
 ### LCD Display
 Hierop kunnen we tekst printen 16x2 van karakter dimensies. Hier zijn 6 digitale poorten voor nodig.
+
+---
 
 ## Software
 Bij het opstarten van de Arduino moet eerst de Setup gebeuren voor dat de bom begint af te tellen. Dit gebeurt in een aantal stappen:
