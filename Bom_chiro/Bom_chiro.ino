@@ -49,6 +49,9 @@ const int maxInterval = 5000;
 const int minInterval = 150;
 const int fastBeepTime = 5; // De laaste x seconden beept de bom met minInterval ertussen (snel)
 
+const int pressDefuse = 20;
+const int pressPlant = 10;
+
 void setup()
 {
   lcd.begin(16, 2);
@@ -315,9 +318,6 @@ void defuseMain(int tijd, Preset preset)
       lcd.setCursor(0, 0);
       lcd.print(timeSec - counter);
     }
-    if ((millis() - startProgramma) % 1000 < 50)
-    {
-    }
     if (!codeDone)
     {
       int number = codeNumber();
@@ -409,6 +409,196 @@ void plantAndDefuse()
 {
   wait();
   lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("ENTER CODE (new)");
+  delay(2000);
+  String code = String(getNumber(4));
+  int tijd = getTime();
+
+  bool plantCodeDone = false;
+  bool planted = false;
+
+  bool defused = false;
+  unsigned long startTime = 0;
+
+  int const timeSec = tijd * 60;
+  int counter = 0;
+  int prevCounter = 0;
+  String ingCode;
+
+  int buttonState = LOW;
+  int prevState = LOW;
+
+  unsigned int interval = maxInterval;
+  unsigned long startProgramma = millis();
+  unsigned long startCycle = millis();
+  lcd.clear();
+  // PLANT
+  while (!plantCodeDone) {
+    int number = codeNumber();
+      if (number != -1 && number != OK)
+      {
+        wait();
+        if (DEBUG == 1)
+        {
+          Serial.print("Nummer: ");
+          Serial.println(number);
+        }
+        ingCode += String(number);
+        if (ingCode.length() == code.length())
+        {
+          if (ingCode == code)
+          {
+            plantCodeDone = true;
+            if (DEBUG == 1)
+              Serial.println("Code completed");
+          }
+          else
+          {
+            ingCode = "";
+            lcd.setCursor(0,0);
+            lcd.print("Wrong code");
+            lcd.setCursor(0,1);
+            lcd.print("Try again");
+          }
+        }
+      }
+  }
+  lcd.setCursor(0,0);
+  lcd.print("Entered code");
+  while (!planted)
+  {
+    int number = codeNumber();
+    if (number == OK)
+    {
+      buttonState = HIGH;
+    }
+    else
+    {
+      buttonState = LOW;
+    }
+    if (buttonState == HIGH && prevState == LOW)
+    { // Als de knop ingedrukt wordt (en dus nog niet ingedrukt was)
+      tone(piezoPin, 1046, 100);
+      startTime = millis(); // Sla de tijd op wanneer de knop ingedrukt wordt
+      if (DEBUG == 1)
+      {
+        Serial.println("Pressed in button");
+      }
+      prevState = HIGH; // Onthoud dat de knop ingedrukt is
+    }
+    else if (buttonState == HIGH && prevState == HIGH)
+    { // Als de knop nog steeds ingedrukt is
+      unsigned long currentTime = millis();
+      int count = (currentTime - startTime) / (pressPlant * 1000 / 32);
+      if (count < 16)
+      {
+        lcd.setCursor(0, 0);
+      }
+      else
+      {
+        lcd.setCursor(0, 1);
+      }
+      printRepeat((char)255, count % 16 + 1, LCD);
+      if (currentTime - startTime >= pressPlant * 1000)
+      {
+        planted = true;
+      } // Als de knop voor 5 seconden is ingedrukt (verschil tussen tijdstip dat de knop werd ingedruk met tijdstip op dit moment) dan is programma klaar (done).
+    }
+    else if (buttonState == LOW && prevState == HIGH)
+    { // Als knop losgelaten wordt (en dus ingedrukt was)
+      if (DEBUG == 1)
+        Serial.println("Released button");
+    }
+  }
+  // DEFUSE
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Press OK");
+  lcd.print(pressDefuse);
+  lcd.print("sec");
+  while (!defused && (millis() - startProgramma < tijd * 60 * 1000L))
+  {
+    if (millis() - startCycle > interval)
+    {
+      beep();
+      startCycle = millis();
+    }
+    counter = (millis() - startProgramma) / 1000;
+    if (counter != prevCounter)
+    {
+      prevCounter = counter;
+      interval = increaseInterval(timeSec, counter);
+      if (prevState != HIGH)
+      {
+        lcd.setCursor(0, 1);
+        lcd.print("                ");
+        lcd.setCursor(0, 1);
+        lcd.print(timeSec - counter);
+      }
+    }
+
+    int number = codeNumber();
+    if (number == OK)
+    {
+      buttonState = HIGH;
+    }
+    else
+    {
+      buttonState = LOW;
+    }
+    if (buttonState == HIGH && prevState == LOW)
+    { // Als de knop ingedrukt wordt (en dus nog niet ingedrukt was)
+      tone(piezoPin, 1046, 100);
+      startTime = millis(); // Sla de tijd op wanneer de knop ingedrukt wordt
+      if (DEBUG == 1)
+      {
+        Serial.println("Pressed in button");
+      }
+      prevState = HIGH; // Onthoud dat de knop ingedrukt is
+    }
+    else if (buttonState == HIGH && prevState == HIGH)
+    { // Als de knop nog steeds ingedrukt is
+      unsigned long currentTime = millis();
+      int count = (currentTime - startTime) / (pressDefuse * 1000 / 32);
+      if (count < 16)
+      {
+        lcd.setCursor(0, 0);
+      }
+      else
+      {
+        lcd.setCursor(0, 1);
+      }
+      printRepeat((char)255, count % 16 + 1, LCD);
+      if (currentTime - startTime >= pressDefuse * 1000)
+      {
+        defused = true;
+      } // Als de knop voor 5 seconden is ingedrukt (verschil tussen tijdstip dat de knop werd ingedruk met tijdstip op dit moment) dan is programma klaar (done).
+    }
+    else if (buttonState == LOW && prevState == HIGH)
+    { // Als knop losgelaten wordt (en dus ingedrukt was)
+      if (DEBUG == 1)
+        Serial.println("Released button");
+    }
+    lcd.setCursor(0, 0);
+    lcd.print("Press OK");
+    lcd.print(pressDefuse);
+    lcd.print("sec");
+  }
+  if (millis() - startProgramma < tijd * 60 * 1000L)
+  {
+    if (DEBUG == 1)
+      Serial.println("Bomb defused");
+    lcd.clear();
+    lcd.print("YOU WON");
+  }
+  else
+  {
+    if (DEBUG == 1)
+      Serial.println("Bomb exploded");
+    lcd.clear();
+    lcd.print("YOU LOST");
+  }
 }
 
 unsigned int increaseInterval(int totalTime, int currentTime)
