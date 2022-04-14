@@ -479,7 +479,6 @@ void plantAndDefuse()
     }
     if (buttonState == HIGH && prevState == LOW)
     { // Als de knop ingedrukt wordt (en dus nog niet ingedrukt was)
-      tone(piezoPin, 1046, 100);
       startTime = millis(); // Sla de tijd op wanneer de knop ingedrukt wordt
       if (DEBUG == 1)
       {
@@ -509,6 +508,8 @@ void plantAndDefuse()
     { // Als knop losgelaten wordt (en dus ingedrukt was)
       if (DEBUG == 1)
         Serial.println("Released button");
+      prevState = LOW;
+      lcd.clear();
     }
   }
   // DEFUSE
@@ -549,7 +550,6 @@ void plantAndDefuse()
     }
     if (buttonState == HIGH && prevState == LOW)
     { // Als de knop ingedrukt wordt (en dus nog niet ingedrukt was)
-      tone(piezoPin, 1046, 100);
       startTime = millis(); // Sla de tijd op wanneer de knop ingedrukt wordt
       if (DEBUG == 1)
       {
@@ -579,11 +579,13 @@ void plantAndDefuse()
     { // Als knop losgelaten wordt (en dus ingedrukt was)
       if (DEBUG == 1)
         Serial.println("Released button");
+      prevState = LOW;
+      lcd.setCursor(0, 0);
+      lcd.print("Press OK");
+      lcd.print(pressDefuse);
+      lcd.print("sec");
     }
-    lcd.setCursor(0, 0);
-    lcd.print("Press OK");
-    lcd.print(pressDefuse);
-    lcd.print("sec");
+    
   }
   if (millis() - startProgramma < tijd * 60 * 1000L)
   {
