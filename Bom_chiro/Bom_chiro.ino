@@ -1,6 +1,7 @@
 #define DEBUG 1
 
 #include <Preset.h>
+#include <Question.h>
 #include <LiquidCrystal.h>
 
 #define SERIAL "serial"
@@ -30,6 +31,10 @@ const int cstWireResist = 10000;
 const Preset preset1("0000", 1, "geel");
 const Preset preset2("1234", 4, "blauw");
 Preset presets[] = {preset1, preset2};
+
+/* ------------------- QUESTIONS ------------------- */
+Question question1(EASY, "7*3");
+Question randomQuestion(EASY);
 
 /* ------------------- VARIABLES ------------------- */
 #define bananaPin1 A0
@@ -77,8 +82,9 @@ void setup()
 
 void loop()
 {
-  man();
-  delay(30000);
+  //man();
+  beep();
+  delay(3000);
 }
 
 void man()
@@ -802,6 +808,11 @@ String getWireHard(String *wiresOut, int amWiresOut)
   return "";
 }
 
+boolean allWiresConnected() {
+  int value = analogRead(wirePin);
+  return (value > 1014);
+}
+
 unsigned int getResistorValue(String wire)
 {
   for (int i = 0; i < sizeof(wireKeys) / sizeof(wireKeys[0]); i++)
@@ -853,4 +864,9 @@ bool stringInList(String string, String *list, int length)
     }
   }
   return false;
+}
+
+Preset getPre() {
+  Preset preset("5555",5,"geel");
+  return preset;
 }
