@@ -23,13 +23,13 @@ int index = 0;
 
 /* draden waardes */
 const int wireValues[] = {930, 839, 696, 512, 320, 179};
-const String wireKeys[] = {"geel", "groen", "blauw", "rood", "paars", "wit"};
+const String wireKeys[] = {"1", "2", "3", "4", "5", "6"};
 const unsigned int wireResistors[] = {1000, 2200, 4700, 10000, 22000, 47000};
 const int cstWireResist = 10000;
 
 /* ------------------- PRESETS ------------------- */
-const Preset preset1("0000", 1, "geel");
-const Preset preset2("1234", 4, "blauw");
+const Preset preset1("0000", 1, "1");
+const Preset preset2("1234", 4, "3");
 Preset presets[] = {preset1, preset2};
 
 /* ------------------- QUESTIONS ------------------- */
@@ -46,7 +46,8 @@ Question randomQuestion(EASY);
 #define piezoPin 8
 #define startPin 2
 
-LiquidCrystal lcd(11, 12, 4, 5, 6, 7);
+const int rs = 11, en = 12, d4 = 4, d5 = 5, d6 = 6, d7 = 7;
+LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 
 int keuzeWaarden = -1;
 
@@ -54,7 +55,7 @@ const int maxInterval = 5000;
 const int minInterval = 150;
 const int fastBeepTime = 5; // De laaste x seconden beept de bom met minInterval ertussen (snel)
 
-const int pressDefuse = 20;
+const int pressDefuseTime = 20;
 const int pressPlant = 10;
 
 void setup()
@@ -522,7 +523,7 @@ void plantAndDefuse()
   lcd.clear();
   lcd.setCursor(0, 0);
   lcd.print("Press OK");
-  lcd.print(pressDefuse);
+  lcd.print(pressDefuseTime);
   lcd.print("sec");
   while (!defused && (millis() - startProgramma < tijd * 60 * 1000L))
   {
@@ -566,7 +567,7 @@ void plantAndDefuse()
     else if (buttonState == HIGH && prevState == HIGH)
     { // Als de knop nog steeds ingedrukt is
       unsigned long currentTime = millis();
-      int count = (currentTime - startTime) / (pressDefuse * 1000 / 32);
+      int count = (currentTime - startTime) / (pressDefuseTime * 1000 / 32);
       if (count < 16)
       {
         lcd.setCursor(0, 0);
@@ -576,7 +577,7 @@ void plantAndDefuse()
         lcd.setCursor(0, 1);
       }
       printRepeat((char)255, count % 16 + 1, LCD);
-      if (currentTime - startTime >= pressDefuse * 1000)
+      if (currentTime - startTime >= pressDefuseTime * 1000)
       {
         defused = true;
       } // Als de knop voor 5 seconden is ingedrukt (verschil tussen tijdstip dat de knop werd ingedruk met tijdstip op dit moment) dan is programma klaar (done).
@@ -588,7 +589,7 @@ void plantAndDefuse()
       prevState = LOW;
       lcd.setCursor(0, 0);
       lcd.print("Press OK");
-      lcd.print(pressDefuse);
+      lcd.print(pressDefuseTime);
       lcd.print("sec");
     }
     
@@ -864,9 +865,4 @@ bool stringInList(String string, String *list, int length)
     }
   }
   return false;
-}
-
-Preset getPre() {
-  Preset preset("5555",5,"geel");
-  return preset;
 }
