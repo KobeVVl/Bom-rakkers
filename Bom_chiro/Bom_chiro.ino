@@ -43,17 +43,19 @@ Question randomQuestion(EASY);
 #define bananaPin4 A3
 #define wirePin A4
 #define codePin A5
-#define piezoPin 8
-#define startPin 2
+#define piezoPin 2
+#define ledPin1 3
+#define ledPin2 4
+#define ledPin3 5
 
-const int rs = 11, en = 12, d4 = 4, d5 = 5, d6 = 6, d7 = 7;
+const int rs = 6, en = 7, d4 = 8, d5 = 9, d6 = 10, d7 = 11;
 LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 
 int keuzeWaarden = -1;
 
 const int maxInterval = 5000;
 const int minInterval = 150;
-const int fastBeepTime = 5; // De laaste x seconden beept de bom met minInterval ertussen (snel)
+const int fastBeepTime = 5; // De laaste x seconden beept de bom met minInterval er tussen (snel)
 
 const int pressDefuseTime = 20;
 const int pressPlant = 10;
@@ -66,14 +68,15 @@ void setup()
     Serial.begin(9600);
   }
   pinMode(piezoPin, OUTPUT);
-  pinMode(startPin, INPUT);
+  pinMode(ledPin1, OUTPUT);
+  pinMode(ledPin2, OUTPUT);
+  pinMode(ledPin3, OUTPUT);
   lcd.print("Bom rakkers");
   delay(2000);
   if (DEBUG == 1)
   {
     Serial.println("-------- SETUP DONE -------");
   }
-  // startUp();
   // delay(500);
   // lcd.setCursor(0, 0);
   // lcd.print("Work in progress");
@@ -115,15 +118,6 @@ void man()
   {
     plantAndDefuse();
   }
-}
-
-void startUp()
-{
-  pressButtonTime(10, startPin, "planting"); // Wacht tot knop 5 seconden ingedrukt wordt.
-  startUpSound();
-  //  tone(piezoPin, 750);
-  //  delay(1000);
-  //  noTone(piezoPin);
 }
 
 void pressButtonTime(int pressTime, int buttonPin)
@@ -692,6 +686,7 @@ int getNumber(int length)
 
 int combinatieBanana()
 {
+  int combinatie[20];
   memset(combinatie, 0, sizeof(combinatie));
   index = 0;
   int waarschijnlijk = 0; // reset en alles op nul voor elke keer als je terug opnieuw checked
