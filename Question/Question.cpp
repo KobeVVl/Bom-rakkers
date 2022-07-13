@@ -1,10 +1,10 @@
 #include "Arduino.h"
 #include "Question.h"
 
-char operators[] = {')', '(', '^','*', '/', '+', '-'};
+char operators[] = {')', '(', '^','/', '*', '+', '-'};
 
-const unsigned int easyMax = 25;
-const unsigned int mediumMax = 50;
+const unsigned int easyMax = 10;
+const unsigned int mediumMax = 25;
 const unsigned int hardMax = 50;
 const unsigned int expMax = 3;
 
@@ -31,11 +31,19 @@ Question::Question(String diff)
     int amOperations; 
     //Geeft een berekening terug van 1 tot 3 operaties, met getallen tot 26. Operaties: *, /, +, -
     if (diff == EASY){
-        amOperations = random(1,3);
-        quest = quest + String(random(0,easyMax+1));
+        amOperations = 1; 
         for (int i=0; i<amOperations;i++){
-            char op = operators[random(3,sizeof(operators)/sizeof(operators[0]))];
-            quest = quest + op + String(random(0,easyMax+1));
+            char op = operators[random(4,sizeof(operators)/sizeof(operators[0]))];
+            if (op == '-'){
+                int cijfer = random(0,200+1);
+                quest = String(cijfer) + op + String(random(0,cijfer+1));
+            }
+            else if (op == '*') {
+                quest = String(random(0, easyMax+1)) + op + String(random(0,easyMax+1));}
+            else if (op == '+') {
+                int cijfer = random(0, 100+1);
+                quest = String(cijfer) + op + String(random(0, 100-cijfer+1));
+            }
         }
         _question = quest;
     }
