@@ -21,7 +21,7 @@
 LiquidCrystal lcd(rest, en, dvier, dvijf, dzes, dzeven);
 
 void setup() {
-    Serial.begin(9600);
+    Serial.begin(115200);
     pinMode(ledPin1, OUTPUT);
     pinMode(ledPin2, OUTPUT);
     pinMode(ledPin3, OUTPUT);

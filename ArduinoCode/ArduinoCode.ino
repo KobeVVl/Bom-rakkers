@@ -1,8 +1,7 @@
-//TODO LCD FIXEN (print ingegeven nummers)
-//LENGTE CODE NIET 0
-//BIJ PLANT DEFUSE TIJD WEG --> VRAGEN TONEN
+//TODO: LAMPJES IN JUISTE VOLGORDE
+//      FOUT MOET STRAF OPLEVEREN (DRAAD EN BANANAS)
 
-#define DEBUG 1
+#define DEBUG 0
 const int OK = 200;
 #define GameModesAmount 2
 #define LCD "lcd"
@@ -13,8 +12,11 @@ const int OK = 200;
 
 /* ------------------- DATA ------------------- */
 /* code keyboard */
-const int codeValues[] = {90, 180, 234, 320, 411, 507, 616, 696, 838, 929, 1013};
-const int codeKeys[] = {OK, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+//const int codeValues[] = {90, 180, 234, 320, 411, 507, 616, 696, 838, 929, 1013};
+//const int codeKeys[] = {OK, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+
+const int codeValues[] = {25, 411, 928};
+const int codeKeys[] = {OK, 2, 1};
 
 /* bananenklemmen waardes */
 const double banana1[] = {4.3, 101, 4.2, 102, 4.1, 103, 3.1, 104, 105, 110, 3.2, 106, 4.0, 107, 3.8, 108, 112, 3.7, 109, 113, 114, 115, 3.5, 111};
@@ -55,7 +57,7 @@ const unsigned long beepLength = 75;
 /* ------------------- SETUP ------------------- */
 LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 void setup() {
-    if (DEBUG) Serial.begin(9600);
+    if (DEBUG) Serial.begin(115200);
     lcd.begin(16,2);
     pinMode(ledPin1, OUTPUT);
     pinMode(ledPin2, OUTPUT);
@@ -68,7 +70,7 @@ void loop(){
     int gameMode;    
     
     lcd.clear();
-    lcd.print("Select game mode");
+    lcd.print("Select gamemode");
     if (DEBUG) {Serial.println("---------- SELECT GAMEMODE ----------");}
     
     gameMode = codeNumber();
@@ -76,19 +78,29 @@ void loop(){
         gameMode = codeNumber(); 
     }
     if (DEBUG) {Serial.print("Gamemode "); Serial.print(gameMode); Serial.println(" selected");}
+    lcd.clear();
+    lcd.print("Gamemode " + String(gameMode));
+    lcd.setCursor(0,1);
+    lcd.print("ingesteld");
+    delay(2000);
 
-    int time = getNumberInt(2, "Time (min)"); //Waits for time to be entered
+    int tijd = getNumberInt(4, "Sec tot ontpl."); //Waits for time to be entered
     if (DEBUG) {
       Serial.print("Maximale tijd is ");
-      Serial.print(time);
-      Serial.println(" minuten");
+      Serial.print(tijd);
+      Serial.println(" seconden");
     }
+    lcd.clear();
+    lcd.print(String(tijd) + " seconden");
+    lcd.setCursor(0,1);
+    lcd.print("tot bom ontploft");
+    delay(2000);
 
-    bool succeeded = runGame(gameMode, time);
+    bool succeeded = runGame(gameMode, tijd);
     lcd.clear();
     if (succeeded){lcd.print("BOM ONTMANTELD");}
-    else {lcd.print("BOM ONTPLOFT");}
-    waitForNumber();
+    else {lcd.print("BOM ONTPLOFT"); tone(piezoPin, beepPitch, 2000);}
+    wait(waitForNumber());
 }
 
 /* ------------------- HELP FUNCTIONS ------------------- */
@@ -107,15 +119,15 @@ int codeNumber() {
   return -1;
 }
 
-int getNumberInt(int length) {return getNumberInt(length, "");}
+int getNumberInt(int lengte) {return getNumberInt(lengte, "");}
 
-int getNumberInt(int length, String display) {return getNumberString(length, display).toInt();}
+int getNumberInt(int lengte, String disp) {return getNumberString(lengte, disp).toInt();}
 
-String getNumberString(int length) {return getNumberString(length, "");}
+String getNumberString(int lengte) {return getNumberString(lengte, "");}
 
-String getNumberString(int length, String display) {
+String getNumberString(int lengte, String disp) {
     lcd.clear();
-    lcd.print(display);
+    lcd.print(disp);
     lcd.setCursor(0,1);
     bool okay = false;
     String string = "";
@@ -123,14 +135,16 @@ String getNumberString(int length, String display) {
     while (!okay) {
       waarde = codeNumber();
       if (waarde != -1 && waarde != OK) {
-        if (string == "" || string.length() == length) {
+        if (string == "" || string.length() == lengte) {
           string = String(waarde);
+          lcd.setCursor(0,1);
           lcd.print("                ");
         }
         else {
           if (DEBUG) Serial.println(waarde);
           string = string + String(waarde);
         }
+        lcd.setCursor(0,1);
         lcd.print(string);
         wait(waarde);
       }
@@ -140,7 +154,7 @@ String getNumberString(int length, String display) {
       }
     }
     if (DEBUG) {
-      Serial.print("Waarde: ");
+      Serial.print(disp==""?"Waarde:":disp);
       Serial.println(string.toInt());
     }
     return string;
@@ -158,52 +172,6 @@ void printRepeat(char character, unsigned int count, String device)
       Serial.print(character);
     else if (device == LCD)
       lcd.print(character);
-  }
-}
-
-void plant(int pressPlant) {
-  bool planted = false;
-  int buttonState = LOW;
-  int prevState = LOW;
-  unsigned long startTime;
-  while (!planted)
-  {
-    int number = codeNumber();
-    if (number == OK)
-    {
-      buttonState = HIGH;
-    }
-    else
-    {
-      buttonState = LOW;
-    }
-    if (buttonState == HIGH && prevState == LOW)
-    { // Als de knop ingedrukt wordt (en dus nog niet ingedrukt was)
-      startTime = millis(); // Sla de tijd op wanneer de knop ingedrukt wordt
-      if (DEBUG) {Serial.println("Pressed in button");}
-      prevState = HIGH; // Onthoud dat de knop ingedrukt is
-    }
-    else if (buttonState == HIGH && prevState == HIGH)
-    { // Als de knop nog steeds ingedrukt is
-      unsigned long currentTime = millis();
-      int count = (currentTime - startTime) / (pressPlant * 1000 / 32);
-      if (count < 16) {
-        lcd.setCursor(0, 0);
-      }
-      else {
-        lcd.setCursor(0, 1);
-      }
-      printRepeat((char)255, count % 16 + 1, LCD);
-      if (currentTime - startTime >= pressPlant * 1000) {
-        planted = true;
-      } // Als de knop voor `pressPlant` seconden is ingedrukt (verschil tussen tijdstip dat de knop werd ingedruk met tijdstip op dit moment) dan is programma klaar (done).
-    }
-    else if (buttonState == LOW && prevState == HIGH)
-    { // Als knop losgelaten wordt (en dus ingedrukt was)
-      if (DEBUG) {Serial.println("Released button");}
-      prevState = LOW;
-      lcd.clear();
-    }
   }
 }
 
@@ -325,57 +293,77 @@ int punishment(int time) {
 
 /* ------------------- GAMEMODE PRESETS ------------------- */
 Preset getPreset(int gameMode){
-    if (gameMode == 2) {
-        int lengteCode = getNumberInt(1, "Lengte code:");
+    if (gameMode == 2) {//PLANT AND DEFUSE MET VRAGEN
+        int lengteCode = 0;
+        while (lengteCode == 0) {
+          lengteCode = getNumberInt(1, "Lengte code:");
+          if (lengteCode == 0) {
+            lcd.clear();
+            lcd.print("Lengte mag niet");
+            lcd.setCursor(0,1);
+            lcd.print("0 zijn");
+            delay(1500);
+          }
+        }
         lcd.clear();
         lcd.print("Code van " + String(lengteCode));
-        lcd.setCursor(1,0);
+        lcd.setCursor(0,1);
         lcd.print("cijfers ingesteld");
         delay(1000);
         String code = getNumberString(lengteCode, "Code:");
         lcd.clear();
         lcd.print("Code " + code);
-        lcd.setCursor(1,0);
+        lcd.setCursor(0,1);
         lcd.print("ingesteld");
         delay(1000);
         int amQuestions = getNumberInt(1, "#Vragen:");
         lcd.clear();
-        lcd.print(amQuestions + " vragen");
-        lcd.setCursor(1,0);
+        lcd.print(String(amQuestions) + " vragen");
+        lcd.setCursor(0,1);
         lcd.print("ingesteld");
         delay(1000);
         int plantTime = getNumberInt(2, "Tijd planten sec");
         lcd.clear();
-        lcd.print(amQuestions + " vragen");
-        lcd.setCursor(1,0);
+        lcd.print(String(plantTime) + " sec planten");
+        lcd.setCursor(0,1);
         lcd.print("ingesteld");
         delay(1000);
-        Preset preset("",-1,-1, amQuestions, plantTime);
+        Preset preset(code,-1,-1, amQuestions, plantTime);
         return preset;
     }
-    else if (gameMode == 1) {
-        int lengteCode = getNumberInt(1, "Lengte code");
+    else if (gameMode == 1) {//DEFUSE (LANG)
+        int lengteCode = 0;
+        while (lengteCode == 0) {
+          lengteCode = getNumberInt(1, "Lengte code:");
+          if (lengteCode == 0) {
+            lcd.clear();
+            lcd.print("Lengte mag niet");
+            lcd.setCursor(0,1);
+            lcd.print("0 zijn");
+            delay(1500);
+          }
+        }
         lcd.clear();
         lcd.print("Code van " + String(lengteCode));
-        lcd.setCursor(1,0);
+        lcd.setCursor(0,1);
         lcd.print("cijfers ingesteld");
         delay(1000);
         String code = getNumberString(lengteCode, "Code:");
         lcd.clear();
         lcd.print("Code " + code);
-        lcd.setCursor(1,0);
+        lcd.setCursor(0,1);
         lcd.print("ingesteld");
         delay(1000);
         int bananaPreset = getNumberInt(1, "banana");
         lcd.clear();
         lcd.print("Bananpreset " + String(bananaPreset));
-        lcd.setCursor(1,0);
+        lcd.setCursor(0,1);
         lcd.print("ingesteld");
         delay(1000);
         int wire = getNumberInt(1, "wire");
         lcd.clear();
         lcd.print("Draad " + String(wire));
-        lcd.setCursor(1,0);
+        lcd.setCursor(0,1);
         lcd.print("ingesteld");
         delay(1000);
         Preset preset(code, bananaPreset, wire);
@@ -389,44 +377,99 @@ Preset getPreset(int gameMode){
 
 /* ------------------- RUN GAME FUNCTIONS ------------------- */
 void waitForPlantCode(String code) {
-    if (DEBUG) {Serial.print("WACHTEN TOT CODE "); Serial.print(code); Serial.println("IS INGEGEVEN");}
-    bool plantedCodeDone = false;
+    if (DEBUG) {Serial.print("WACHTEN TOT CODE "); Serial.print(code); Serial.println(" IS INGEGEVEN");}
+    bool plantedCodeDone = (code == "");
     String plantedCode = "";
     lcd.clear();
     lcd.print("Geef code in");
-    lcd.setCursor(1,0);
+    lcd.setCursor(0,1);
     while(!plantedCodeDone){
       int nr = codeNumber();
       if (nr != -1 && nr != OK)
       {
-        wait(nr);
         if (DEBUG) {
           Serial.print("Nummer: ");
           Serial.println(nr);
         }
         plantedCode += String(nr);
+        lcd.setCursor(0,1);
         lcd.print(plantedCode);
         if (plantedCode.length() == code.length())
         {
           if (plantedCode == code)
           {
             plantedCodeDone = true;
-            digitalWrite(ledPin1, HIGH);
             if (DEBUG) Serial.println("Code completed");
           }
           else
           {
             tone(piezoPin, 500, 500);
             plantedCode = "";
+            lcd.setCursor(0,1);
             lcd.print("                ");
           }
         }
+        wait(nr);
       }
     }
 }
 
+void plant(int pressPlant) {
+  bool planted = false;
+  int buttonState = LOW;
+  int prevState = LOW;
+  unsigned long startTime;
+  lcd.clear();
+  lcd.print("Houd OK " + String(pressPlant) + " sec");
+  lcd.setCursor(0,1);
+  lcd.print("om te planten");
+  while (!planted)
+  {
+    int number = codeNumber();
+    if (number == OK)
+    {
+      buttonState = HIGH;
+    }
+    else
+    {
+      buttonState = LOW;
+    }
+    if (buttonState == HIGH && prevState == LOW)
+    { // Als de knop ingedrukt wordt (en dus nog niet ingedrukt was)
+      lcd.clear();
+      startTime = millis(); // Sla de tijd op wanneer de knop ingedrukt wordt
+      if (DEBUG) {Serial.println("Pressed in button");}
+      prevState = HIGH; // Onthoud dat de knop ingedrukt is
+    }
+    else if (buttonState == HIGH && prevState == HIGH)
+    { // Als de knop nog steeds ingedrukt is
+      unsigned long currentTime = millis();
+      int count = (currentTime - startTime) / (pressPlant * 1000 / 32);
+      if (count < 16) {
+        lcd.setCursor(0, 0);
+      }
+      else {
+        lcd.setCursor(0, 1);
+      }
+      printRepeat((char)255, count % 16 + 1, LCD);
+      if (currentTime - startTime >= pressPlant * 1000) {
+        planted = true;
+      } // Als de knop voor `pressPlant` seconden is ingedrukt (verschil tussen tijdstip dat de knop werd ingedruk met tijdstip op dit moment) dan is programma klaar (done).
+    }
+    else if (buttonState == LOW && prevState == HIGH)
+    { // Als knop losgelaten wordt (en dus ingedrukt was)
+      if (DEBUG) {Serial.println("Released button");}
+      prevState = LOW;
+      lcd.clear();
+      lcd.print("Houd OK " + String(pressPlant) + " sec");
+      lcd.setCursor(0,1);
+      lcd.print("om te planten");
+    }
+  }
+}
+
 /* ------------------- RUN GAME ------------------- */
-bool runGame(int gameMode, int time) {
+bool runGame(int gameMode, int tijd) {
     Preset preset = getPreset(gameMode);
 
     Question questions[preset.getAmQuestions()];
@@ -434,12 +477,13 @@ bool runGame(int gameMode, int time) {
       questions[i] = Question(EASY);
     }
 
-    //waitForPlantCode(preset.getCode());
+    waitForPlantCode(preset.getCode());
     plant(preset.getPlantTime());
+    wait(OK);
 
-    bool codeDone = false;
-    bool wireConnectDone = false;
-    bool colorWireDone = false;
+    bool codeDone = (gameMode == 2);
+    bool wireConnectDone = (preset.getBananaPreset() == -1);
+    bool colorWireDone = (preset.getWire() == -1);
     bool questionsDone = (preset.getAmQuestions() == 0);
 
     String ingCode; //Houdt de ingegeven code bij
@@ -452,10 +496,24 @@ bool runGame(int gameMode, int time) {
     int counter = 0;
     int prevCounter = 0;
 
+    if (DEBUG){
+      Serial.println("------------ GAME PRESET ------------");
+      Serial.print("Code: "); Serial.println(preset.getCode());
+      Serial.print("Banana: "); Serial.println(preset.getBananaPreset());
+      Serial.print("Wire: "); Serial.println(preset.getWire());
+      Serial.print("PlantTime: "); Serial.println(preset.getPlantTime());
+      Serial.print("#Questions: "); Serial.println(preset.getAmQuestions());
+      Serial.print("codeDone: "); Serial.println(codeDone);
+      Serial.print("wireConnectDone: "); Serial.println(wireConnectDone);
+      Serial.print("colorWireDone: "); Serial.println(colorWireDone);
+      Serial.print("questionsDone: "); Serial.println(questionsDone);
+      Serial.println("-----------------------------");
+    }
+
     unsigned int interval = maxInterval;
     unsigned long startProgramma = millis();
     unsigned long startCycle = millis();
-    while ((!codeDone || !wireConnectDone || !colorWireDone || questionsDone) && (millis() - startProgramma < time * 60 * 1000L))
+    while ((!codeDone || !wireConnectDone || !colorWireDone || !questionsDone) && (millis() - startProgramma < tijd * 1000L))
   {
     if (millis() - startCycle > interval)
     {
@@ -466,9 +524,19 @@ bool runGame(int gameMode, int time) {
     if (counter != prevCounter)
     {
       prevCounter = counter;
-      interval = increaseInterval(time*60, counter);
-      lcd.clear();
-      lcd.print(time*60 - counter);
+      interval = increaseInterval(tijd, counter);
+      if (preset.getAmQuestions() <= 0) {
+        lcd.clear();
+        lcd.print(tijd - counter);
+      }
+      if (DEBUG){
+        Serial.println("-----------------------------");
+        Serial.print("codeDone: "); Serial.println(codeDone);
+        Serial.print("wireConnectDone: "); Serial.println(wireConnectDone);
+        Serial.print("colorWireDone: "); Serial.println(colorWireDone);
+        Serial.print("questionsDone: "); Serial.println(questionsDone);
+        Serial.println("-----------------------------");
+      }
     }
     if (!codeDone)
     {
@@ -544,18 +612,40 @@ bool runGame(int gameMode, int time) {
       }
       int answerPart = codeNumber();
       if (answerPart != -1 && answerPart != OK) {
+        if (answer.length() == 3) {
+          lcd.setCursor(0,1);
+          lcd.print("                ");
+          answer = String(answerPart);
+        }
+        else {answer += String(answerPart);}
+        lcd.setCursor(0,1);
+        lcd.print(answer);
+        if (DEBUG){
+          Serial.print("Current answer: ");
+          Serial.println(answer);
+        }
         wait(answerPart);
-        answer += String(answerPart);
       }
       else if (answerPart == OK) {
+        if (DEBUG){
+          Serial.println("Pressed OK to check answer");
+          Serial.print("Answer is correct? ");
+          Serial.println(questions[questionIndex].checkAnswer(answer.toInt()));
+        }
         if (questions[questionIndex].checkAnswer(answer.toInt())){
           questionIndex++;
           if (questionIndex == preset.getAmQuestions()) questionsDone = true;
         }
+        else {
+          answer = "";
+          lcd.setCursor(0,1);
+          lcd.print("                ");
+        }
+        wait(answerPart);
       }
     }
   }
-  if (millis() - startProgramma < time * 60 * 1000L) {
+  if (millis() - startProgramma < tijd * 1000L) {
     return true;
   }
   else {
