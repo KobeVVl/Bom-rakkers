@@ -1,7 +1,7 @@
 //TODO: LAMPJES IN JUISTE VOLGORDE
 //      FOUT MOET STRAF OPLEVEREN (DRAAD EN BANANAS)
 
-#define DEBUG 0
+#define DEBUG false
 const int OK = 200;
 #define GameModesAmount 2
 #define LCD "lcd"
@@ -12,11 +12,9 @@ const int OK = 200;
 
 /* ------------------- DATA ------------------- */
 /* code keyboard */
-//const int codeValues[] = {90, 180, 234, 320, 411, 507, 616, 696, 838, 929, 1013};
-//const int codeKeys[] = {OK, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+const int codeValues[] = {414, 511, 696, 839, 928, 234, 1013, 90, 180, 612, 316};
+const int codeKeys[] = {OK, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 
-const int codeValues[] = {25, 411, 928};
-const int codeKeys[] = {OK, 2, 1};
 
 /* bananenklemmen waardes */
 const double banana1[] = {4.3, 101, 4.2, 102, 4.1, 103, 3.1, 104, 105, 110, 3.2, 106, 4.0, 107, 3.8, 108, 112, 3.7, 109, 113, 114, 115, 3.5, 111};
@@ -33,12 +31,12 @@ const String wireKeys[] = {"blauw", "groen", "rood", "oranje", "geel", "paars"};
 #define bananaPin2 A4
 #define bananaPin3 A3
 #define bananaPin4 A2
-#define wirePin A1
-#define codePin A0
-#define piezoPin 2
-#define ledPin1 3
-#define ledPin2 4
-#define ledPin3 5
+#define wirePin A1  
+#define codePin A0  //wit
+#define piezoPin 2 //wit
+#define ledPin1 3  //paars
+#define ledPin2 4  //blauw
+#define ledPin3 5  //groen
 #define rs 6 //wit
 #define en 7 //paars
 #define d4 8 //blauw
@@ -53,6 +51,11 @@ const int fastBeepTime = 5; // De laaste x seconden beept de bom met minInterval
 
 const unsigned int beepPitch = 3000;
 const unsigned long beepLength = 75;
+
+/* ------------------- GLOBAL ------------------- */
+Preset previousPreset("0000", -1, -1, 3, 15);
+int previousTime = 60;
+bool reusePrevious = false;
 
 /* ------------------- SETUP ------------------- */
 LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
@@ -69,6 +72,10 @@ void setup() {
 void loop(){
     int gameMode;    
     
+    if (reusePrevious) {
+      bool succeeded = runGame(-1, previousTime, true);
+    }
+
     lcd.clear();
     lcd.print("Select gamemode");
     if (DEBUG) {Serial.println("---------- SELECT GAMEMODE ----------");}
@@ -85,6 +92,7 @@ void loop(){
     delay(2000);
 
     int tijd = getNumberInt(4, "Sec tot ontpl."); //Waits for time to be entered
+    previousTime = tijd;
     if (DEBUG) {
       Serial.print("Maximale tijd is ");
       Serial.print(tijd);
@@ -96,11 +104,25 @@ void loop(){
     lcd.print("tot bom ontploft");
     delay(2000);
 
-    bool succeeded = runGame(gameMode, tijd);
+    bool succeeded = runGame(gameMode, tijd, false);
     lcd.clear();
-    if (succeeded){lcd.print("BOM ONTMANTELD");}
+    if (succeeded){lcd.print("BOM ONTMANTELD"); }
     else {lcd.print("BOM ONTPLOFT"); tone(piezoPin, beepPitch, 2000);}
-    wait(waitForNumber());
+    
+    resetSystem();
+
+    wait(waitForNumber()); //WACHT TOT ER EEN KNOP INGEDRUKT WORDT OM DOOR TE GAAN
+
+    lcd.clear();
+    lcd.print("Hergebruik inst?");
+    lcd.setCursor(0,1);
+    lcd.print("0 = NEE; 1 = JA");
+    int reuse = codeNumber();
+    while(reuse > 1 || gameMode < 0){
+        reuse = codeNumber(); 
+    }
+    reusePrevious = (reuse == 0)? false: true;
+
 }
 
 /* ------------------- HELP FUNCTIONS ------------------- */
@@ -112,11 +134,25 @@ int waitForNumber() {
 
 /* Geeft nummer terug voor gegeven waarde of -1 als het geen nummer is */
 int codeNumber() {
-  int value = analogRead(codePin);
-  for (int i = 0; i < sizeof(codeValues) / sizeof(codeValues[0]); i++) {
-    if (value < codeValues[i] + 20 && value > codeValues[i] - 20) return codeKeys[i];
+  int waarde = -1;
+  while(analogRead(codePin) == 0){}
+
+  bool test = false;
+  int value;
+  while(!test){
+    value = analogRead(codePin);
+    delay(10);
+    if(analogRead(codePin) == value){
+      test = true;
+    }
   }
-  return -1;
+  for (int i = 0; i < sizeof(codeValues) / sizeof(codeValues[0]); i++) {
+    if (value < codeValues[i] + 10 && value > codeValues[i] - 10){
+         waarde = codeKeys[i];
+         delay(150);
+    }
+  }
+  return waarde;
 }
 
 int getNumberInt(int lengte) {return getNumberInt(lengte, "");}
@@ -133,6 +169,7 @@ String getNumberString(int lengte, String disp) {
     String string = "";
     int waarde;
     while (!okay) {
+      while(analogRead(codePin) != 0){}
       waarde = codeNumber();
       if (waarde != -1 && waarde != OK) {
         if (string == "" || string.length() == lengte) {
@@ -196,6 +233,21 @@ unsigned int increaseInterval(int totalTime, int currentTime)
 void beep()
 {
   tone(piezoPin, beepPitch, beepLength);
+}
+
+void victoryBlink(){
+  setGreenLight(true, true, true);
+  delay(500);
+  setGreenLight(false, false, false);
+  delay(500);
+  setGreenLight(true, true, true);
+  delay(500);
+  setGreenLight(false, false, false);
+  delay(500);
+  setGreenLight(true, true, true);
+  delay(500);
+  setGreenLight(false, false, false);
+  delay(500);
 }
 
 /* ------------------- BOMB STATE FUNCTIONS ------------------- */
@@ -468,10 +520,36 @@ void plant(int pressPlant) {
   }
 }
 
-/* ------------------- RUN GAME ------------------- */
-bool runGame(int gameMode, int tijd) {
-    Preset preset = getPreset(gameMode);
+void setGreenLight(bool codeDone, bool wireConnectDone, bool colorWireDone) {
+  int lightsOn = 0;
+  if (codeDone) lightsOn+=1;
+  if (wireConnectDone) lightsOn+=1;
+  if (colorWireDone) lightsOn+=1;
+  switch (lightsOn) {
+    case 0:
+      digitalWrite(ledPin1, LOW); digitalWrite(ledPin2, LOW); digitalWrite(ledPin3, LOW);
+    case 1:
+      digitalWrite(ledPin1, HIGH); digitalWrite(ledPin2, LOW); digitalWrite(ledPin3, LOW);
+    case 2:
+      digitalWrite(ledPin1, HIGH); digitalWrite(ledPin2, HIGH); digitalWrite(ledPin3, LOW);
+    case 3:
+      digitalWrite(ledPin1, HIGH); digitalWrite(ledPin2, HIGH); digitalWrite(ledPin3, HIGH);
+  } 
+}
 
+/* ------------------- RUN GAME ------------------- */
+bool runGame(int gameMode, int tijd, bool reusePrevious) {
+    int oorsporkelijkeTijd = tijd;
+    Preset preset;
+    if (reusePrevious) {
+      preset = previousPreset;
+    }
+    else {
+      preset = getPreset(gameMode);
+    }
+
+    previousPreset = preset;
+    
     Question questions[preset.getAmQuestions()];
     for (int i=0; i<preset.getAmQuestions(); i++){
       questions[i] = Question(EASY);
@@ -554,7 +632,7 @@ bool runGame(int gameMode, int tijd) {
           if (ingCode == preset.getCode())
           {
             codeDone = true;
-            digitalWrite(ledPin1, HIGH);
+            setGreenLight(codeDone, wireConnectDone, colorWireDone);
             if (DEBUG) Serial.println("Code completed");
           }
           else
@@ -580,7 +658,7 @@ bool runGame(int gameMode, int tijd) {
         if (wirePres == preset.getBananaPreset())
         {
           wireConnectDone = true;
-          digitalWrite(ledPin2, HIGH);
+          setGreenLight(codeDone, wireConnectDone, colorWireDone);
           if (DEBUG) Serial.println("Banana wires zijn juist verbonden");
         }
       }
@@ -593,15 +671,14 @@ bool runGame(int gameMode, int tijd) {
         if (colorWire == preset.getWire())
         {
           colorWireDone = true;
-          digitalWrite(ledPin3, HIGH);
-          if (DEBUG == 1)
+          setGreenLight(codeDone, wireConnectDone, colorWireDone);
+          if (DEBUG)
             Serial.println("Right wire pulled out");
         }
-        // else
-        // {
-        //   wiresOut[amWireOut] = colorWire;
-        //   amWireOut++;
-        // }
+        else
+        {
+          tijd -= oorsporkelijkeTijd/10;
+        }
       }
     }
     if (!questionsDone) {
@@ -637,10 +714,10 @@ bool runGame(int gameMode, int tijd) {
           if (questionIndex == preset.getAmQuestions()) questionsDone = true;
         }
         else {
-          answer = "";
           lcd.setCursor(0,1);
           lcd.print("                ");
         }
+        answer = "";
         wait(answerPart);
       }
     }
@@ -651,4 +728,13 @@ bool runGame(int gameMode, int tijd) {
   else {
     return false;
   }
+}
+
+/* ---------------- RESET SYSTEM ----------------- */
+void resetSystem(){
+  digitalWrite(ledPin1, LOW);
+  digitalWrite(ledPin2, LOW);
+  digitalWrite(ledPin3, LOW);
+  lcd.clear();
+  noTone(piezoPin);
 }
